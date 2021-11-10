@@ -1,0 +1,22 @@
+# GitHub repos downloaded
+faye-websocket-node/
+websocket/
+ws/
+uWebSockets/
+spring4ws-demos/
+websockets/
+undertow/
+boost/
+netty/
+libwebsockets/
+python-socketio/
+tornado-websocket-client-example/
+
+old-gorilla/
+
+# PHP directories
+*/vendor/
+*/composer*
+
+# stews.py
+stews.py

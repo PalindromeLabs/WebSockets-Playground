@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Chat</title>
+
+        <style>
+            .chat {
+                width: 100%;
+            }
+
+            .chat__messages {
+                height: 300px;
+                max-height: 300px;
+                overflow-y: scroll;
+                border: 1px solid #eee;
+                border-bottom: 0;
+            }
+
+            .chat__message {
+                padding: 20px;
+            }
+
+            .chat__message:nth-child(odd) {
+                background-color: #eee;
+            }
+
+            .chat__input {
+                width: 100%;
+                border-color: #eee;
+                font: inherit;
+                padding: 20px;
+                outline: none;
+            }
+
+            .chat__send {
+                border: 0;
+                border: 1px solid #eee;
+                border-left: 0;
+                background: #fff;
+                width: 100px;
+                cursor: pointer;
+                font: inherit;
+                outline: none;
+            }
+
+            .chat__people {
+                padding: 20px;
+                border: 1px solid #eee;
+                border-top: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <chat></chat>
+        </div>
+        
+        <script src="https://unpkg.com/vue"></script>
+        <script>
+            let bus = new Vue()
+            let socket = new WebSocket('ws://localhost:8080')
+
+            let Message = {
+                props: [
+                    'message'
+                ],
+                template: `
+                    <div class="chat__message">
+                        <strong>{{ message.user.name }}</strong>: {{ message.body }}
+                    </div>
+                `
+            }
+
+            let Messages = {
+                data () {
+                    return {
+                        messages: []
+                    }
+                },
+                components: {
+                    'message': Message
+                },
+                template: `
+                    <div class="chat__messages">
+                        <message v-for="message in messages" :key="message.id" :message="message"></message>
+                    </div>
+                `,
+                mounted () {
+                    bus.$on('message', (payload) => {
+                        this.messages.unshift(payload)
+                    })
+                }
+            }
+
+            let MessageForm = {
+                data () {
+                    return {
+                        body: ''
+                    }
+                },
+                template: `
+                    <form action="#">
+                        <textarea class="chat__input" placeholder="Type your message" v-model="body" @keydown="handleInput"></textarea>
+                    </form>
+                `,
+                methods: {
+                    handleInput (e) {
+                        if (e.keyCode === 13 && e.shiftKey === false) {
+                            e.preventDefault();
+                            this.send()
+                        }
+                    },
+                    send () {
+                        let payload = {
+                            event: 'message',
+                            data: {
+                                id: Date.now(),
+                                body: this.body,
+                                user: {
+                                    name: 'You'
+                                }
+                            }
+                        }
+
+                        bus.$emit('message', payload.data)
+
+                        socket.send(JSON.stringify(payload))
+
+                        this.body = null
+                    }
+                }
+            }
+
+            let People = {
+                data () {
+                    return {
+                        users: []
+                    }
+                },
+                template: `
+                    <div class="chat__people">
+                        People online: {{ users.length }}
+                        <ul>
+                            <li v-for="user in users">{{ user.name }}</li>
+                        </ul>
+                    </div>
+                `,
+                mounted () {
+                    bus.$on('joined', (payload) => {
+                        this.addUser(payload.user)
+                    })
+
+                    bus.$on('users', (payload) => {
+                        this.users = payload
+                    })
+
+                    bus.$on('left', (payload) => {
+                        this.removeUser(payload.user)
+                    })
+                },
+                methods: {
+                    addUser (user) {
+                        this.users.unshift(user)
+                    },
+                    removeUser (user) {
+                        this.users = this.users.filter((u) => {
+                            return u.id !== user.id
+                        })
+                    }
+                }
+            }
+
+            let Chat = {
+                data () {
+                    return {
+                        name: '',
+                        joined: false
+                    }
+                },
+                components: {
+                    'messages': Messages,
+                    'message-form': MessageForm,
+                    'people': People
+                },
+                template: `
+                    <div class="chat">
+                        <template v-if="!joined">
+                            <form action="#" @submit.prevent="join">
+                                <label for="name">
+                                    Enter your name:
+                                    <input type="text" id="name" v-model.trim="name">
+                                    <button type="submit">Join chat</button>
+                                </label>
+                            </form>
+                        </template>
+                        <template v-else>
+                            <messages></messages>
+                            <message-form></message-form>
+                            <people></people>
+                        </template>
+                    </div>
+                `,
+                methods: {
+                    join () {
+                        if (!this.name) {
+                            return;
+                        }
+
+                        socket.send(JSON.stringify({
+                            event: 'joined',
+                            data: {
+                                user: {
+                                    id: Date.now(),
+                                    name: this.name
+                                }
+                            }
+                        }))
+                        
+                        this.joined = true
+                    }
+                },
+                mounted () {
+                    socket.onmessage = (e) => {
+                        let data = JSON.parse(e.data)
+                        bus.$emit(data.event, data.data)
+                    }
+                }
+            }
+
+            new Vue({
+                el: '#app',
+                components: {
+                    'chat': Chat
+                }
+            })
+        </script>
+    </body>
+</html>
