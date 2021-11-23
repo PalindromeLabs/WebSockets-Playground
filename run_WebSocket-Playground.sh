@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# To Do: Add these common WebSocket servers
+# Phoenix (Elixir): https://github.com/phoenixframework/phoenix
+# Cowboy (Erlang): https://github.com/ninenines/cowboy
+# Workerman (PHP): https://github.com/walkor/Workerman
+# Jetty (Java): https://github.com/eclipse/jetty.projects
+
 download(){
   git clone https://github.com/websockets/ws/
   git clone https://github.com/faye/faye-websocket-node
@@ -11,7 +17,6 @@ download(){
   git clone https://github.com/ilkerkesen/tornado-websocket-client-example
 #  git clone https://github.com/hkp22/php-websocket-example # modified this default repo
   git clone https://github.com/warmcat/libwebsockets
-  git clone https://github.com/ninenines/cowboy
 }
 
 install_deps(){
@@ -149,8 +154,8 @@ ping_external(){
   python3 playground_send.py --subprotocols "lws-status" -u libwebsockets.org
 }
 
-#download
-#install_deps
+download
+install_deps
 start_servers
 ping_local
 ping_external

@@ -16,7 +16,8 @@ old-gorilla/
 
 # PHP directories
 */vendor/
-*/composer*
+*/composer.phar
+*/composer.lock
 
 # stews.py
 stews.py
